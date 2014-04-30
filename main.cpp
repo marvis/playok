@@ -20,7 +20,8 @@ using namespace cv;
 string infile;
 IplImage ** tmplImgs;
 
-string chessnames[7] = {"卒", "车", "马", "象", "士", "将", "炮"};
+string chessnames[14] = {"卒", "車", "馬", "象", "士", "将", "炮",
+	"兵", "俥", "傌", "相", "仕", "帅", "炮"};
 char fennames[14] = {
     'p', 'r', 'n', 'b', 'a', 'k', 'c',
     'P', 'R', 'N', 'B', 'A', 'K', 'C'};
@@ -66,7 +67,7 @@ string matrix2fenstr(char matrix[10][9])
     return oss.str();
 }
 
-void Init()
+void Init(double xratio, double yratio)
 {
 	tmplImgs = new IplImage * [14];
 	tmplImgs[BLACK_ZU] = cvLoadImage(POKTMPLPATH"black_zu.png", 1);
@@ -83,6 +84,17 @@ void Init()
 	tmplImgs[RED_SHI] = cvLoadImage(POKTMPLPATH"red_shi.png", 1);
 	tmplImgs[RED_JIANG] = cvLoadImage(POKTMPLPATH"red_jiang.png", 1);
 	tmplImgs[RED_PAO] = cvLoadImage(POKTMPLPATH"red_pao.png", 1);
+	int width = 25 * xratio;
+	int height = 25 * yratio;
+	for(int i = 0; i < 14; i++)
+	{
+		IplImage * tmplImg = tmplImgs[i];
+		IplImage * reszImg = cvCreateImage(cvSize(width, height), IPL_DEPTH_8U, 3);
+		cvResize(tmplImg, reszImg);
+		cvReleaseImage(&tmplImg);
+		tmplImgs[i] = reszImg;
+
+	}
 }
 
 bool isChess(IplImage * image, int x0, int y0, int type, double thresh)
@@ -93,10 +105,13 @@ bool isChess(IplImage * image, int x0, int y0, int type, double thresh)
 	assert(tmplImg);
 	int width = tmplImg->width;
 	int height = tmplImg->height;
-	for(int dy = -1; dy <= 1; dy++)
+	int offsets[] = {0, 1, -1, 2, -2, 3, -3};
+	for(int jj = 0; jj < 3; jj++)
 	{
-		for(int dx = -1; dx <= 1; dx++)
+		int dy = offsets[jj];
+		for(int ii = 0; ii < 3; ii++)
 		{
+			int dx = offsets[ii];
 			double sumdiff = 0.0;
 			for(int j = 0; j < height; j++)
 			{
@@ -118,21 +133,31 @@ bool isChess(IplImage * image, int x0, int y0, int type, double thresh)
 	return false;
 }
 
-int whichBlackChess(IplImage * image, int x0, int y0, double thresh = 20.0)
+int whichBlackChess(IplImage * image, int x0, int y0)
 {
-	for(int i = 0; i < 7; i++)
+	double threshs[] = {50, 70, 90, 110, 130, 150, 200};
+	for(int t = 0; t < 4; t++)
 	{
-		if(isChess(image, x0, y0, i, thresh)) 
-			return i;
+		double thresh = threshs[t];
+		for(int i = 0; i < 7; i++)
+		{
+			if(isChess(image, x0, y0, i, thresh)) 
+				return i;
+		}
 	}
 	return -1;
 }
-int whichRedChess(IplImage * image, int x0, int y0, double thresh = 20.0)
+int whichRedChess(IplImage * image, int x0, int y0)
 {
-	for(int i = 7; i < 14; i++)
+	double threshs[] = {50, 70, 90, 110, 130, 150, 200};
+	for(int t = 0; t < 4; t++)
 	{
-		if(isChess(image, x0, y0, i, thresh)) 
-			return i;
+		double thresh = threshs[t];
+		for(int i = 7; i < 14; i++)
+		{
+			if(isChess(image, x0, y0, i, thresh)) 
+				return i;
+		}
 	}
 	return -1;
 }
@@ -140,20 +165,21 @@ int whichRedChess(IplImage * image, int x0, int y0, double thresh = 20.0)
 int main(int argc, char ** argv)
 {
 	if(argc == 1) { cout<<"Usage: "<<argv[0]<<" <screenimage> [-v]"<<endl; return 0;}
-	Init();
 	infile = argv[1];
 	bool verbose = (argc >= 3 && string(argv[2]) == "-v");
 	IplImage * image = cvLoadImage(argv[1], 1);
 	IplImage * drawImage = cvLoadImage(argv[1], 1);
 	int width = image->width;
 	int height = image->height; 
+	int midx = (width+1)/2.0;
+	int midy = (height+1)/2.0;
 
 	int left = 0;
 	for(int x = 0; x < width; x++)
 	{
-		int R = CV_IMAGE_ELEM(image, unsigned char, 102, 3*x + 2);
-		int G = CV_IMAGE_ELEM(image, unsigned char, 102, 3*x + 1);
-		int B = CV_IMAGE_ELEM(image, unsigned char, 102, 3*x + 0);
+		int R = CV_IMAGE_ELEM(image, unsigned char, midy, 3*x + 2);
+		int G = CV_IMAGE_ELEM(image, unsigned char, midy, 3*x + 1);
+		int B = CV_IMAGE_ELEM(image, unsigned char, midy, 3*x + 0);
 		double dist = ABS(R - 227) + ABS(G - 175) + ABS(B - 108);
 		if(dist < 5)
 		{
@@ -165,9 +191,9 @@ int main(int argc, char ** argv)
 
 	for(int x = width - 1; x >= 0; x--)
 	{
-		int R = CV_IMAGE_ELEM(image, unsigned char, 102, 3*x + 2);
-		int G = CV_IMAGE_ELEM(image, unsigned char, 102, 3*x + 1);
-		int B = CV_IMAGE_ELEM(image, unsigned char, 102, 3*x + 0);
+		int R = CV_IMAGE_ELEM(image, unsigned char, midy, 3*x + 2);
+		int G = CV_IMAGE_ELEM(image, unsigned char, midy, 3*x + 1);
+		int B = CV_IMAGE_ELEM(image, unsigned char, midy, 3*x + 0);
 		double dist = ABS(R - 227) + ABS(G - 175) + ABS(B - 108);
 		if(dist < 5)
 		{
@@ -175,39 +201,159 @@ int main(int argc, char ** argv)
 			break;
 		}
 	}
+	int top = 0;
+	for(int y = 0; y < height; y++)
+	{
+		int R = CV_IMAGE_ELEM(image, unsigned char, y, 3*left + 2);
+		int G = CV_IMAGE_ELEM(image, unsigned char, y, 3*left + 1);
+		int B = CV_IMAGE_ELEM(image, unsigned char, y, 3*left + 0);
+		double dist = ABS(R - 227) + ABS(G - 175) + ABS(B - 108);
+		if(dist < 5)
+		{
+			top = y;
+			break;
+		}
+	}
 
-	left += 76;
-	right -= 78;
-	int top = 144, bot = 656;
-	double xstep = 63, ystep = 56.7;
+	int bot = 0;
+	for(int y = height-1; y >= 0; y--)
+	{
+		int R = CV_IMAGE_ELEM(image, unsigned char, y, 3*left + 2);
+		int G = CV_IMAGE_ELEM(image, unsigned char, y, 3*left + 1);
+		int B = CV_IMAGE_ELEM(image, unsigned char, y, 3*left + 0);
+		double dist = ABS(R - 227) + ABS(G - 175) + ABS(B - 108);
+		if(dist < 5)
+		{
+			bot = y;
+			break;
+		}
+	}
 
-	//cvRectangle(drawImage, cvPoint(left, top), cvPoint(right, bot), CV_RGB(0, 0, 255), 1 );
+	int ch_x0 = 0;
+	for(int x = left; x <= right; x++)
+	{
+		int count = 0;
+		for(int y = top; y <= bot; y++)
+		{
+			int R = CV_IMAGE_ELEM(image, unsigned char, y, 3*x + 2);
+			int G = CV_IMAGE_ELEM(image, unsigned char, y, 3*x + 1);
+			int B = CV_IMAGE_ELEM(image, unsigned char, y, 3*x + 0);
+			double dist = ABS(R - 146) + ABS(G - 103) + ABS(B - 58);
+			if(dist < 20)
+			{
+				count++;
+				if(count > 50)
+				{
+					ch_x0 = x;
+					break;
+				}
+			}
+		}
+		if(ch_x0 > 0) break;
+	}
+	int ch_y0 = 0;
+	for(int y = top; y <= bot; y++)
+	{
+		int count = 0;
+		for(int x = left; x <= right; x++)
+		{
+			int R = CV_IMAGE_ELEM(image, unsigned char, y, 3*x + 2);
+			int G = CV_IMAGE_ELEM(image, unsigned char, y, 3*x + 1);
+			int B = CV_IMAGE_ELEM(image, unsigned char, y, 3*x + 0);
+			double dist = ABS(R - 146) + ABS(G - 103) + ABS(B - 58);
+			if(dist < 20)
+			{
+				count++;
+				if(count > 50)
+				{
+					ch_y0 = y;
+					break;
+				}
+			}
+		}
+		if(ch_y0 > 0) break;
+	}
+	int ch_xn = 0;
+	for(int x = right; x >= left; x--)
+	{
+		int count = 0;
+		for(int y = ch_y0; y <= bot; y++)
+		{
+			int R = CV_IMAGE_ELEM(image, unsigned char, y, 3*x + 2);
+			int G = CV_IMAGE_ELEM(image, unsigned char, y, 3*x + 1);
+			int B = CV_IMAGE_ELEM(image, unsigned char, y, 3*x + 0);
+			double dist = ABS(R - 146) + ABS(G - 103) + ABS(B - 58);
+			if(dist < 10)
+			{
+				count++;
+				if(count > 50)
+				{
+					ch_xn = x;
+					break;
+				}
+			}
+		}
+		if(ch_xn > 0) break;
+	}
+	int ch_yn = 0;
+	for(int y = bot; y >= top; y--)
+	{
+		int count = 0;
+		for(int x = ch_x0; x <= right; x++)
+		{
+			int R = CV_IMAGE_ELEM(image, unsigned char, y, 3*x + 2);
+			int G = CV_IMAGE_ELEM(image, unsigned char, y, 3*x + 1);
+			int B = CV_IMAGE_ELEM(image, unsigned char, y, 3*x + 0);
+			double dist = ABS(R - 146) + ABS(G - 103) + ABS(B - 58);
+			if(dist < 10)
+			{
+				count++;
+				if(count > 50)
+				{
+					ch_yn = y;
+					break;
+				}
+			}
+		}
+		if(ch_yn > 0) break;
+	}
+
+	cvRectangle(drawImage, cvPoint(ch_x0, ch_y0), cvPoint(ch_xn, ch_yn), CV_RGB(0, 0, 255), 1 );
+	double xstep = (ch_xn - ch_x0)/8.0;
+	double ystep = (ch_yn - ch_y0)/9.0;
+	double xratio = xstep/63;
+	double yratio = ystep/57;
+
+	Init(xratio, yratio);
 	char matrix[10][9];
+	vector<int> movPoses;
 	for(int j = 0; j < 10; j++)
 	{
 		for(int i = 0; i < 9; i++)
 		{
-			int x0 = left + xstep * i;
-			int y0 = top + ystep * j;
+			int x0 = ch_x0 + xstep * i;
+			int y0 = ch_y0 + ystep * j;
 			bool ismove = false;
 
 			{
-				int x1 = x0 - 27;
-				int y1 = y0 - 14;
+				int x1 = x0 - 26*xratio;
+				int y1 = y0 - 20*yratio;
 				int R = CV_IMAGE_ELEM(image, unsigned char, y1, 3*x1 + 2);
 				int G = CV_IMAGE_ELEM(image, unsigned char, y1, 3*x1 + 1);
 				int B = CV_IMAGE_ELEM(image, unsigned char, y1, 3*x1 + 0);
 				int dist = ABS(R - 172) + ABS(G - 135) + ABS(B - 86);
-				if(dist < 10)
+				if(dist < 20)
 				{
 					ismove = true;
-					cvRectangle(drawImage, cvPoint(x0-31, y0-28), cvPoint(x0 + 30, y0 + 27), CV_RGB(0, 0, 255), 1 );
+					movPoses.push_back(j*9 + i);
+					//cvRectangle(drawImage, cvPoint(x0-31*xratio, y0-28*yratio), cvPoint(x0 + 30*xratio, y0 + 27*yratio), CV_RGB(0, 0, 255), 1 );
+					cvRectangle(drawImage, cvPoint(x1, y1), cvPoint(x0 + 30*xratio, y0 + 27*yratio), CV_RGB(0, 0, 255), 1 );
 				}
 			}
 
 			{
-				int x1 = x0 - 14;
-				int y1 = y0 - 8;
+				int x1 = x0 - 14*xratio;
+				int y1 = y0 - 8*yratio;
 				int R = CV_IMAGE_ELEM(image, unsigned char, y1, 3*x1 + 2);
 				int G = CV_IMAGE_ELEM(image, unsigned char, y1, 3*x1 + 1);
 				int B = CV_IMAGE_ELEM(image, unsigned char, y1, 3*x1 + 0);
@@ -218,39 +364,39 @@ int main(int argc, char ** argv)
 				int distblack = ABS(R - 69) + ABS(G - 50) + ABS(B - 36);
 				if(distred < 5)
 				{
-					cvRectangle(drawImage, cvPoint(x0-25, y0-26), cvPoint(x0 + 25, y0 + 26), CV_RGB(255, 0, 0), 1 ); 
+					cvRectangle(drawImage, cvPoint(x0-25*xratio, y0-26*yratio), cvPoint(x0 + 25*xratio, y0 + 26*yratio), CV_RGB(255, 0, 0), 1 ); 
 					if(0)
 					{
-						IplImage * tmpImg = cropImage(image, x0 - 12, y0 - 12, 25, 25);
+						IplImage * tmpImg = cropImage(image, x0 - 12*xratio, y0 - 12*yratio, 25*xratio, 25*yratio);
 						ostringstream oss;
 						oss << infile <<".out"<<j*9+i<<".png";
 						cvSaveImage(oss.str().c_str(), tmpImg);
 						cvReleaseImage(&tmpImg);
 					}
-					int type = whichRedChess(image, x0 - 12, y0 - 12);
+					int type = whichRedChess(image, x0 - 12*xratio, y0 - 12*yratio);
 					matrix[j][i] = type;
 					if(type >= 7 && type <= 13) 
 					{
 						if(verbose)
 						{
-							if(ismove) cout<<RT_BKG(chessnames[type-7]);
-							else cout<<RT(chessnames[type-7]);
+							if(ismove) cout<<RT_BKG(chessnames[type]);
+							else cout<<RT(chessnames[type]);
 						}
 					}
 					continue;
 				}
 				else if(distblack < 5)
 				{
-					cvRectangle(drawImage, cvPoint(x0-25, y0-26), cvPoint(x0 + 25, y0 + 26), CV_RGB(0, 0, 0), 1 ); 
+					cvRectangle(drawImage, cvPoint(x0-25*xratio, y0-26*yratio), cvPoint(x0 + 25*xratio, y0 + 26*yratio), CV_RGB(0, 0, 0), 1 ); 
 					if(0)
 					{
-						IplImage * tmpImg = cropImage(image, x0 - 12, y0 - 12, 25, 25);
+						IplImage * tmpImg = cropImage(image, x0 - 12*xratio, y0 - 12*yratio, 25*xratio, 25*yratio);
 						ostringstream oss;
 						oss << infile <<".out"<<j*9+i<<".png";
 						cvSaveImage(oss.str().c_str(), tmpImg);
 						cvReleaseImage(&tmpImg);
 					}
-					int type = whichBlackChess(image, x0 - 12, y0 - 12);
+					int type = whichBlackChess(image, x0 - 12*xratio, y0 - 12*yratio);
 					matrix[j][i] = type;
 					if(type >= 0 && type <= 6) 
 					{
@@ -275,22 +421,46 @@ int main(int argc, char ** argv)
 		}
 		if(verbose) cout<<endl;
 	}
-	cout<<matrix2fenstr(matrix)<<endl;
-	for(int j = 0; j < 10; j++)
+	string fenstr = matrix2fenstr(matrix);
+	string mycolor = "";
+	string whoNext = "";
+	for(int j = 7; j <= 9; j++)
 	{
 		for(int i = 0; i < 9; i++)
 		{
-			int x0 = left + xstep * i;
-			int y0 = top + ystep * j;
-			int x1 = x0 - 27;
-			int y1 = y0 - 14;
-			int R = CV_IMAGE_ELEM(image, unsigned char, y1, 3*x1 + 2);
-			int G = CV_IMAGE_ELEM(image, unsigned char, y1, 3*x1 + 1);
-			int B = CV_IMAGE_ELEM(image, unsigned char, y1, 3*x1 + 0);
-			int dist = ABS(R - 172) + ABS(G - 135) + ABS(B - 86);
-			if(dist < 10)cvRectangle(drawImage, cvPoint(x0-31, y0-28), cvPoint(x0 + 30, y0 + 27), CV_RGB(0, 0, 255), 1 );
+			if(matrix[j][i] == BLACK_JIANG)
+			{
+				mycolor = "b";
+				break;
+			}
+			else if(matrix[j][i] == RED_JIANG)
+			{
+				mycolor = "w";
+				break;
+			}
 		}
+		if(mycolor != "") break;
 	}
+	assert(movPoses.size() == 2 || movPoses.size() == 0);
+	if(movPoses.size() == 2)
+	{
+		int pos1 = movPoses[0];
+		int i1 = pos1 % 9;
+		int j1 = pos1 / 9;
+		int pos2 = movPoses[1];
+		int i2 = pos2 % 9;
+		int j2 = pos2 / 9;
+		if(matrix[j1][i1] == -1 && matrix[j2][i2] != -1 && matrix[j2][i2] <= 6) whoNext = "w";
+		else if(matrix[j1][i1] == -1 && matrix[j2][i2] != -1 && matrix[j2][i2] > 6) whoNext = "b";
+		else if(matrix[j1][i1] != -1 && matrix[j2][i2] == -1 && matrix[j1][i1] <= 6) whoNext = "w";
+		else if(matrix[j1][i1] != -1 && matrix[j2][i2] == -1 && matrix[j1][i1] > 6) whoNext = "b";
+		else cerr<<"Invalid moves"<<endl;
+	}
+	else
+	{
+		if(fenstr == "rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR" || fenstr == "RNBAKABNR/9/1C5C1/P1P1P1P1P/9/9/p1p1p1p1p/1c5c1/9/rnbakabnr") whoNext = "w";
+	}
+	cout<<fenstr<<" "<<mycolor<<" "<<whoNext<<" "<<ch_x0<<" "<<ch_y0<<" "<<xstep<<" "<<ystep<<endl;
 
 	cvSaveImage((infile + ".out.png").c_str(), drawImage);
 	cvReleaseImage(&image);

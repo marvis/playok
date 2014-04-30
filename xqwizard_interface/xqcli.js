@@ -70,11 +70,11 @@ var fy = mv['from']['y'];
 var tx = mv['to']['x'];
 var ty = mv['to']['y'];
 
-var fx = Math.round((fx*59+30+4) * 1.33);
+/*var fx = Math.round((fx*59+30+4) * 1.33);
 var fy = Math.round((fy*65.5+31.5+149) * 1.33);
 var tx = Math.round((tx*59+30+4) * 1.33);
 var ty = Math.round((ty*65.5+31.5+149) * 1.33);
-
+*/
 // back convert Fen
 if (program.fen.indexOf('k') > program.fen.indexOf('K')) {
     var outputFen = convertFen(mv['fen']).split(' ')[0];
