@@ -187,6 +187,7 @@ int main(int argc, char ** argv)
 			break;
 		}
 	}
+	if(left == 0) return 0;
 	int right = 0;
 
 	for(int x = width - 1; x >= 0; x--)
@@ -201,6 +202,8 @@ int main(int argc, char ** argv)
 			break;
 		}
 	}
+	if(right == 0) return 0;
+	
 	int top = 0;
 	for(int y = 0; y < height; y++)
 	{
@@ -214,6 +217,7 @@ int main(int argc, char ** argv)
 			break;
 		}
 	}
+	if(top == 0) return 0;
 
 	int bot = 0;
 	for(int y = height-1; y >= 0; y--)
@@ -228,6 +232,7 @@ int main(int argc, char ** argv)
 			break;
 		}
 	}
+	if(bot == 0) return 0;
 
 	int ch_x0 = 0;
 	for(int x = left; x <= right; x++)
@@ -251,6 +256,8 @@ int main(int argc, char ** argv)
 		}
 		if(ch_x0 > 0) break;
 	}
+	if(ch_x0 == 0) return 0;
+
 	int ch_y0 = 0;
 	for(int y = top; y <= bot; y++)
 	{
@@ -273,6 +280,8 @@ int main(int argc, char ** argv)
 		}
 		if(ch_y0 > 0) break;
 	}
+	if(ch_y0 == 0) return 0;
+
 	int ch_xn = 0;
 	for(int x = right; x >= left; x--)
 	{
@@ -295,6 +304,8 @@ int main(int argc, char ** argv)
 		}
 		if(ch_xn > 0) break;
 	}
+	if(ch_xn == 0) return 0;
+
 	int ch_yn = 0;
 	for(int y = bot; y >= top; y--)
 	{
@@ -317,6 +328,7 @@ int main(int argc, char ** argv)
 		}
 		if(ch_yn > 0) break;
 	}
+	if(ch_yn == 0) return 0;
 
 	cvRectangle(drawImage, cvPoint(ch_x0, ch_y0), cvPoint(ch_xn, ch_yn), CV_RGB(0, 0, 255), 1 );
 	double xstep = (ch_xn - ch_x0)/8.0;

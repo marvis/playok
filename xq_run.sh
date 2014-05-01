@@ -1,6 +1,5 @@
 # step1: check the start fenstr
-sleep 5
-rm play*.png
+sleep 2
 result=""
 while [ "$result" == "" ]; 
 do
@@ -34,6 +33,13 @@ do
 
 	result=`./main screen.png`
 	fenstr=`echo $result | awk '{print $1}'`
+	if [ "$fenstr" == "" ]; then 
+		echo "无法识别"
+		sleep 0.2
+		failcount=$[failcount+1]
+		if [ $failcount -ge 4 ]; then break; fi
+		continue
+	fi
 	ch_x0=`echo $result | awk '{print $4}'`
 	ch_y0=`echo $result | awk '{print $5}'`
 	xstep=`echo $result | awk '{print $6}'`
@@ -83,7 +89,7 @@ do
 	y1=`echo "($win_y0+$ch_y0+$y1*$ystep)*10/10"|bc`
 	#echo "start move"
 	cliclick c:$x0,$y0
-	sleep 0.5
+	sleep 0.1
 	cliclick c:$x1,$y1
 
 	if [ "$status" == "1" ]; then
@@ -96,5 +102,5 @@ do
 	./fenstr2matrix.sh $prev_fenstr `./whichmoves $fenstr $prev_fenstr`
 	echo "-------------------------------"
 
-	sleep 0.5 
+	sleep 0.2 
 done
